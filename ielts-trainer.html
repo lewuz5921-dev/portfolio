@@ -108,10 +108,17 @@
                             <option value="ielts_high">雅思高频核心进阶大纲 (100个标准词)</option>
                         </select>
                     </label>
-                    <div class="pt-2">
+                    <div class="pt-2 space-y-3">
                         <button onclick="startSession()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center space-x-2">
                             <span>开始筛选生词</span>
                             <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                        
+                        <!-- 核心新增：温故知新复习窗口入口 (Feedback 4) -->
+                        <button onclick="startReviewSession()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 border border-slate-200/80">
+                            <i class="fa-solid fa-rotate text-indigo-500"></i>
+                            <span>温故知新 (复习已掌握词汇)</span>
+                            <span id="welcome-review-count" class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-bold ml-1">0</span>
                         </button>
                     </div>
                 </div>
@@ -277,7 +284,7 @@
                 <!-- Question Card -->
                 <div class="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 min-h-[300px] flex flex-col justify-between">
                     <div class="space-y-6">
-                        <span class="text-xs font-semibold text-indigo-500 uppercase tracking-widest">CONTEXT CLOZE CHALLENGE</span>
+                        <span class="text-xs font-semibold text-indigo-500 uppercase tracking-widest" id="cloze-card-tag">CONTEXT CLOZE CHALLENGE</span>
                         <h4 id="challenge-question-text" class="text-xl md:text-2xl text-slate-800 serif-font leading-relaxed font-medium">
                             The team had to _______ their strategies to adapt to new rules.
                         </h4>
@@ -303,18 +310,18 @@
                     <i class="fa-solid fa-square-poll-vertical text-5xl"></i>
                 </div>
                 <div class="space-y-2">
-                    <h3 class="text-2xl font-bold text-slate-900">通关测评报告</h3>
-                    <p class="text-slate-500 text-sm">通过实际例句语境检测，你的真实掌握情况如下：</p>
+                    <h3 class="text-2xl font-bold text-slate-900" id="results-headline">通关测评报告</h3>
+                    <p class="text-slate-500 text-sm" id="results-subline">通过实际例句语境检测，你的真实掌握情况如下：</p>
                 </div>
 
                 <!-- Statistics grid -->
                 <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto">
                     <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
-                        <span class="text-xs text-emerald-800 font-semibold block uppercase">已掌握 (过关)</span>
+                        <span class="text-xs text-emerald-800 font-semibold block uppercase" id="mastered-label-txt">已掌握 (过关)</span>
                         <span id="result-mastered-count" class="text-3xl font-black text-emerald-600 serif-font">0</span>
                     </div>
                     <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4">
-                        <span class="text-xs text-rose-800 font-semibold block uppercase">需重修 (保留)</span>
+                        <span class="text-xs text-rose-800 font-semibold block uppercase" id="restudy-label-txt">需重修 (保留)</span>
                         <span id="result-restudy-count" class="text-3xl font-black text-rose-600 serif-font">0</span>
                     </div>
                 </div>
@@ -324,7 +331,7 @@
                     <div>
                         <h5 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center space-x-1">
                             <i class="fa-solid fa-check-circle text-emerald-500"></i>
-                            <span>完美掌握的单词（从生词表移除）</span>
+                            <span id="mastered-list-header">完美掌握的单词（从生词表移除）</span>
                         </h5>
                         <div id="result-mastered-list" class="flex flex-wrap gap-2"></div>
                     </div>
@@ -332,7 +339,7 @@
                     <div class="pt-2">
                         <h5 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center space-x-1">
                             <i class="fa-solid fa-circle-exclamation text-rose-500"></i>
-                            <span>记忆模糊的单词（已重新打回生词池）</span>
+                            <span id="restudy-list-header">记忆模糊的单词（已重新打回生词池）</span>
                         </h5>
                         <div id="result-restudy-list" class="flex flex-wrap gap-2"></div>
                     </div>
@@ -340,7 +347,7 @@
 
                 <!-- Action Button -->
                 <div class="pt-4 border-t border-slate-100">
-                    <button onclick="backToWelcomeOrTesting()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center space-x-2">
+                    <button id="results-action-btn" onclick="backToWelcomeOrTesting()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center space-x-2">
                         <span>继续积累生词，开启新征程</span>
                         <i class="fa-solid fa-rotate-left"></i>
                     </button>
@@ -569,7 +576,7 @@
             { word: "Inhibit", phonetic: "/ɪnˈhɪb.ɪt/", definition: "To hinder, restrain, or prevent an action or process.", translation: "抑制；禁止" },
             { word: "Innovate", phonetic: "/ˈɪn.ə.veɪt/", definition: "To make changes in something established, especially by introducing new methods.", translation: "创新；革新" },
             { word: "Integrate", phonetic: "/ˈɪn.tɪ.ɡreɪt/", definition: "To combine one thing with another so that they become a whole.", translation: "整合；使一体化" },
-            { word: "Intricate", phonetic: "/ˈɪn.trɪ.kət/", definition: "Very detailed; complicated or detailed.", translation: "错综复杂的；精细的" },
+            { word: "Intricate", phonetic: "/ˈln.trɪ.kət/", definition: "Very detailed; complicated or detailed.", translation: "错综复杂的；精细的" },
             { word: "Intrinsic", phonetic: "/ɪnˈtrɪn.zɪk/", definition: "Belonging naturally; essential.", translation: "本质的；固有的" },
             { word: "Magnitude", phonetic: "/ˈmæɡ.nɪ.tʃuːd/", definition: "The great size or extent of something; importance.", translation: "巨大；重要性；震级" },
             { word: "Manifest", phonetic: "/ˈmæn.ɪ.fest/", definition: "Clear or obvious to the eye or mind; to display or show.", translation: "显现；明显的" },
@@ -588,6 +595,7 @@
         ];
 
         // --- 运行状态管理 ---
+        let masteredWordsPool = []; // 核心新增：真正用来跟踪并保存已掌握词汇的全局数组
         let currentQueue = []; 
         let knownWordsCount = 0;
         let unknownWordsCount = 0;
@@ -595,10 +603,11 @@
         let currentTestWord = null;
         let generatedStory = null; 
 
-        // --- 完形填空测试状态管理 ---
+        // --- 完形填空测试与复习状态管理 (Feedback 4) ---
         let challengeQuestions = [];
         let currentQuestionIndex = 0;
         let challengeResults = { mastered: [], restudy: [] };
+        let isReviewMode = false; // 跟踪是否处于“复习模式”而不是常规“小说后通关测试”
 
         // --- 初始化基础逻辑 ---
         window.onload = function() {
@@ -614,8 +623,9 @@
             shuffleArray(ieltsVocabularyDatabase);
             wordPointer = 0;
             currentQueue = [];
-            knownWordsCount = 0;
+            // 保留 masteredWordsPool 及 knownWordsCount，不作重置，以允许连续累积
             unknownWordsCount = 0;
+            isReviewMode = false;
             
             showScreen('testing-screen');
             loadNextWordToTest();
@@ -684,7 +694,12 @@
                 buttonEl.querySelector('span:nth-child(2)').className = "text-white font-semibold";
                 buttonEl.querySelector('i').className = "fa-solid fa-circle-check text-white text-base";
                 
-                knownWordsCount++;
+                // 筛选阶段即算作临时掌握，将其推入 mastered 词池（允许复习时进行重验验证）
+                if (!masteredWordsPool.some(w => w.word === currentTestWord.word)) {
+                    masteredWordsPool.push(currentTestWord);
+                }
+                knownWordsCount = masteredWordsPool.length;
+                
                 setTimeout(() => {
                     loadNextWordToTest();
                     updateStatsUI();
@@ -718,7 +733,7 @@
             }, 1000);
         }
 
-        // --- 拼写、字形与前缀形似词本地筛选算法 (Feedback 2) ---
+        // --- 拼写、字形与前缀形似词本地筛选算法 ---
         function getSimilarWords(targetWord, count = 3) {
             let pool = ieltsVocabularyDatabase.filter(w => w.word.toLowerCase() !== targetWord.toLowerCase());
             
@@ -739,7 +754,7 @@
             return pool.slice(0, count);
         }
 
-        // --- 核心：极简情景化 AI 写作与 完形填空问题生成 (Prompt 全面升级干扰选项契合字形) ---
+        // --- 核心：极简情景化 AI 写作与 完形填空问题生成 ---
         async function triggerStoryGeneration() {
             showScreen('loading-screen');
             
@@ -908,8 +923,57 @@ SCHEMA DETAILS:
             });
         }
 
-        // --- 完形填空测评引擎逻辑 (实现答对/答错展现四词中文大片) ---
+        // --- 核心新增：温故知新复习模式启动器 (Feedback 4) ---
+        function startReviewSession() {
+            if (masteredWordsPool.length === 0) {
+                showStatusToast("您当前还没有已掌握的单词，请先去筛选生词或阅读通关！", "error");
+                return;
+            }
+
+            isReviewMode = true;
+            challengeQuestions = [];
+            currentQuestionIndex = 0;
+            challengeResults = { mastered: [], restudy: [] };
+
+            // 抽取最多 10 个已掌握的单词用于重测
+            let reviewTargets = [...masteredWordsPool];
+            shuffleArray(reviewTargets);
+            reviewTargets = reviewTargets.slice(0, 10);
+
+            // 制作完形填空复习题目 (基于牛津释义与形似选项干扰机制)
+            challengeQuestions = reviewTargets.map(item => {
+                const simWords = getSimilarWords(item.word, 3);
+                const options = [item.word, ...simWords.map(w => w.word)];
+                
+                const transMap = {};
+                transMap[item.word] = item.translation;
+                simWords.forEach(w => {
+                    transMap[w.word] = w.translation;
+                });
+
+                shuffleArray(options);
+                const optionsTrans = options.map(opt => transMap[opt] || "未知");
+
+                return {
+                    target_word: item.word,
+                    cloze_sentence: `Review Test: Choose the word that matches the following dictionary description: "${item.definition}"`,
+                    options: options,
+                    options_translation: optionsTrans,
+                    correct_answer: item.word
+                };
+            });
+
+            showScreen('challenge-screen');
+            
+            // 切换卡片上的提示语
+            document.getElementById('cloze-card-tag').innerText = "ANTI-LUCK MASTERED REVIEW";
+            
+            renderChallengeQuestion();
+        }
+
+        // --- 完形填空及复习测评引擎逻辑 ---
         function startChallenge() {
+            isReviewMode = false;
             challengeQuestions = generatedStory.questions || [];
             if (challengeQuestions.length === 0) {
                 fallbackStoryGeneration();
@@ -919,6 +983,7 @@ SCHEMA DETAILS:
             currentQuestionIndex = 0;
             challengeResults = { mastered: [], restudy: [] };
             showScreen('challenge-screen');
+            document.getElementById('cloze-card-tag').innerText = "CONTEXT CLOZE CHALLENGE";
             renderChallengeQuestion();
         }
 
@@ -970,8 +1035,8 @@ SCHEMA DETAILS:
             buttons.forEach(b => b.disabled = true);
 
             const currentWordStr = challengeQuestions[currentQuestionIndex].target_word;
-            const wordObj = currentQueue.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase()) || 
-                            ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase());
+            // 寻找对应的完整词库对象
+            const wordObj = ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase());
 
             // 1. 高亮正确与错误项
             buttons.forEach(btn => {
@@ -994,19 +1059,18 @@ SCHEMA DETAILS:
                 }
             });
 
-            // 2. 核心：动态揭秘所有4个选项的中文释义 (Feedback 3)
+            // 2. 动态揭秘所有 4 个选项的中文释义 (Feedback 3)
             const transLabels = document.querySelectorAll('.challenge-opt-trans');
             transLabels.forEach(label => {
                 label.classList.remove('max-h-0', 'opacity-0');
                 label.classList.add('max-h-12', 'opacity-100');
-                // 让正确单词的释义显示绿色，提高重点认知度
                 if (label.closest('button').classList.contains('border-emerald-500')) {
                     label.classList.remove('text-slate-500');
                     label.classList.add('text-emerald-700', 'font-semibold');
                 }
             });
 
-            // 归档状态
+            // 3. 分类存储测评结果
             if (selectedOpt === correctOpt) {
                 if (wordObj && !challengeResults.mastered.some(w => w.word === wordObj.word)) {
                     challengeResults.mastered.push(wordObj);
@@ -1021,10 +1085,8 @@ SCHEMA DETAILS:
         }
 
         function nextChallengeQuestion() {
-            // 防御未归类分配的情况
             const currentWordStr = challengeQuestions[currentQuestionIndex].target_word;
-            const wordObj = currentQueue.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase()) || 
-                            ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase());
+            const wordObj = ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase());
             
             if (wordObj) {
                 const isMastered = challengeResults.mastered.some(w => w.word === wordObj.word);
@@ -1047,11 +1109,11 @@ SCHEMA DETAILS:
             document.getElementById('result-mastered-count').innerText = masteredCount;
             document.getElementById('result-restudy-count').innerText = restudyCount;
 
-            // 已掌握
+            // 渲染答对（通过）列表
             const masteredList = document.getElementById('result-mastered-list');
             masteredList.innerHTML = '';
             if (masteredCount === 0) {
-                masteredList.innerHTML = `<p class="text-xs text-slate-400 italic">加油，下次争取斩获全对！</p>`;
+                masteredList.innerHTML = `<p class="text-xs text-slate-400 italic">本次测试未有单词完全通过检测，加油！</p>`;
             } else {
                 challengeResults.mastered.forEach(item => {
                     const badge = document.createElement('span');
@@ -1061,11 +1123,11 @@ SCHEMA DETAILS:
                 });
             }
 
-            // 扔回池子重修的词
+            // 渲染答错（降级重修）列表
             const restudyList = document.getElementById('result-restudy-list');
             restudyList.innerHTML = '';
             if (restudyCount === 0) {
-                restudyList.innerHTML = `<p class="text-xs text-slate-400 italic">天才诞生！本次10个极近形考题完美全对通过！</p>`;
+                restudyList.innerHTML = `<p class="text-xs text-slate-400 italic">全对通过！您所有的词汇检测都非常牢固！</p>`;
             } else {
                 challengeResults.restudy.forEach(item => {
                     const badge = document.createElement('span');
@@ -1075,12 +1137,60 @@ SCHEMA DETAILS:
                 });
             }
 
-            // 1. 已答对的，加到熟词总数统计中。
-            knownWordsCount += masteredCount;
-            
-            // 2. 答错的直接重修：重修列表重新作为 active currentQueue（积攒生词池）
-            currentQueue = [...challengeResults.restudy];
+            const headline = document.getElementById('results-headline');
+            const subline = document.getElementById('results-subline');
+            const masteredHeader = document.getElementById('mastered-list-header');
+            const restudyHeader = document.getElementById('restudy-list-header');
+            const actionBtn = document.getElementById('results-action-btn');
+            const masteredLabel = document.getElementById('mastered-label-txt');
+            const restudyLabel = document.getElementById('restudy-label-txt');
 
+            // 根据是否是“复习模式”动态配置文案与归类规则 (Feedback 4)
+            if (isReviewMode) {
+                // 复习模式下的核心闭环惩罚算法：
+                // 答错的单词，无情从 masteredWordsPool 彻底移出，并打回 currentQueue (即未掌握生词收集池)
+                challengeResults.restudy.forEach(item => {
+                    masteredWordsPool = masteredWordsPool.filter(w => w.word !== item.word);
+                    if (!currentQueue.some(q => q.word === item.word)) {
+                        currentQueue.push(item);
+                        unknownWordsCount++;
+                    }
+                });
+
+                headline.innerText = "已掌握词汇 · 复习重验报告";
+                subline.innerText = "复习完毕！以下是您本次词汇重测（完形填空）的真实结果：";
+                masteredLabel.innerText = "仍旧掌握 (保留进度)";
+                restudyLabel.innerText = "复习露馅 (扣回生词池)";
+                masteredHeader.innerText = "经受住检验的熟词 (继续保持)";
+                restudyHeader.innerText = "已作废并归为生词的词汇 (重新打回池子，供下一篇故事自动编织)";
+                
+                actionBtn.setAttribute('onclick', 'backToWelcomeFromReview()');
+                actionBtn.innerHTML = `<span>返回主界面</span><i class="fa-solid fa-house"></i>`;
+            } else {
+                // 普通通关测试模式 (读完小说后的常规测试)
+                challengeResults.mastered.forEach(item => {
+                    if (!masteredWordsPool.some(w => w.word === item.word)) {
+                        masteredWordsPool.push(item);
+                    }
+                });
+                challengeResults.restudy.forEach(item => {
+                    masteredWordsPool = masteredWordsPool.filter(w => w.word !== item.word);
+                });
+
+                currentQueue = [...challengeResults.restudy];
+
+                headline.innerText = "通关测评报告";
+                subline.innerText = "通过实际例句语境检测，你的真实掌握情况如下：";
+                masteredLabel.innerText = "已掌握 (过关)";
+                restudyLabel.innerText = "需重修 (保留)";
+                masteredHeader.innerText = "完美掌握的单词（从生词表移除）";
+                restudyHeader.innerText = "记忆模糊的单词（已重新打回生词池）";
+
+                actionBtn.setAttribute('onclick', 'backToWelcomeOrTesting()');
+                actionBtn.innerHTML = `<span>继续积累生词，开启新征程</span><i class="fa-solid fa-rotate-left"></i>`;
+            }
+
+            knownWordsCount = masteredWordsPool.length;
             updateStatsUI();
         }
 
@@ -1090,6 +1200,12 @@ SCHEMA DETAILS:
                 const speakableText = rawSent.replace(/_______/g, 'blank');
                 speakText(speakableText, 0.9);
             }
+        }
+
+        function backToWelcomeFromReview() {
+            isReviewMode = false;
+            showScreen('welcome-screen');
+            updateStatsUI();
         }
 
         function backToWelcomeOrTesting() {
@@ -1193,10 +1309,7 @@ SCHEMA DETAILS:
 
         // --- 单词解释详情弹窗控制 ---
         function openDefinitionModal(wordStr) {
-            let wordObj = currentQueue.find(w => w.word.toLowerCase() === wordStr.toLowerCase());
-            if (!wordObj) {
-                wordObj = ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === wordStr.toLowerCase());
-            }
+            let wordObj = ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === wordStr.toLowerCase());
 
             if (!wordObj) {
                 wordObj = {
@@ -1321,10 +1434,17 @@ SCHEMA DETAILS:
         }
 
         function updateStatsUI() {
+            knownWordsCount = masteredWordsPool.length;
             document.getElementById('stats-known-count').innerText = knownWordsCount;
             document.getElementById('stats-unknown-count').innerText = unknownWordsCount;
             document.getElementById('stats-unfamiliar-queue').innerText = currentQueue.length;
             
+            // 同步更新首页复习按钮上的计数
+            const welcomeReviewCountLabel = document.getElementById('welcome-review-count');
+            if (welcomeReviewCountLabel) {
+                welcomeReviewCountLabel.innerText = knownWordsCount;
+            }
+
             const badge = document.getElementById('queue-counter-badge');
             if (badge) badge.innerText = `${currentQueue.length} / 10 个生词`;
 
