@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雅思语境抗遗忘背词系统 - Contextual IELTS Trainer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Playfair Display -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .serif-font {
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(243, 244, 246, 1);
+            border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 99px;
+        }
+        /* Pulse Animation */
+        @keyframes custom-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        .pulse-effect {
+            animation: custom-pulse 2s infinite ease-in-out;
+        }
+        /* High-fidelity Glassmorphism Blur Reveal */
+        .glass-blur {
+            filter: blur(8px);
+            transition: filter 0.3s ease-out, background-color 0.3s ease;
+        }
+        .glass-blur:hover, .glass-blur.unblurred {
+            filter: blur(0px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col transition-colors duration-300">
+
+    <header class="bg-white border-b border-slate-100 sticky top-0 z-40 backdrop-blur-md bg-white/90">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md shadow-indigo-100">
+                    <i class="fa-solid fa-graduation-cap text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight">IELTS Context</h1>
+                    <p class="text-xs text-slate-500">雅思语境抗遗忘背词系统</p>
+                </div>
+            </div>
+            
+            <!-- 动态统计工具栏 -->
+            <div class="hidden md:flex items-center space-x-6 text-sm">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span class="text-slate-600 font-medium">已掌握: <span id="stats-known-count" class="text-slate-900 font-bold">0</span></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                    <span class="text-slate-600 font-medium">不认识: <span id="stats-unknown-count" class="text-slate-900 font-bold">0</span></span>
+                </div>
+                <div class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full font-medium flex items-center space-x-1">
+                    <i class="fa-solid fa-layer-group text-xs"></i>
+                    <span>当前积攒: <span id="stats-unfamiliar-queue" class="font-bold">0</span>/10</span>
+                </div>
+            </div>
+
+            <!-- API Configuration Button -->
+            <button onclick="toggleApiModal()" class="text-slate-500 hover:text-indigo-600 transition p-2 rounded-lg hover:bg-slate-50" title="API设置">
+                <i class="fa-solid fa-key text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 flex flex-col justify-between relative">
+
+        <!-- 欢迎/开始界面 -->
+        <section id="welcome-screen" class="space-y-8 my-auto">
+            <div class="text-center max-w-xl mx-auto space-y-4">
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">IELTS Target 7.5+</span>
+                <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight serif-font">摆脱死记硬背，在极简语境中重建核心词汇</h2>
+                <p class="text-slate-600 leading-relaxed text-sm md:text-base">
+                    专为雅思考生定制。内置 100 个核心高频词，快速过滤熟词。每凑齐 10 个生词，Gemini 即时生成一篇极简易读的情景短文，在真实日常画面里锁定记忆。
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm max-w-md mx-auto space-y-4">
+                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-indigo-500"></i>
+                    <span>配置背词偏好</span>
+                </h3>
+                <div class="space-y-3">
+                    <label class="block">
+                        <span class="text-xs text-slate-500 font-medium block mb-1">词汇大纲</span>
+                        <select id="vocab-set-select" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ielts_high">雅思高频核心进阶大纲 (100个标准词)</option>
+                        </select>
+                    </label>
+                    <div class="pt-2">
+                        <button onclick="startSession()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center space-x-2">
+                            <span>开始筛选生词</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 测试单词界面 -->
+        <section id="testing-screen" class="hidden space-y-6 my-auto">
+            <div class="max-w-md mx-auto space-y-6">
+                <!-- Progress Header -->
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">生词收集进度</span>
+                    <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md font-bold" id="queue-counter-badge">0 / 10 个生词</span>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div id="queue-progress-bar" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <!-- Main Vocabulary Card -->
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 relative overflow-hidden flex flex-col justify-between min-h-[350px]">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-indigo-500 uppercase tracking-widest">IELTS CORE</span>
+                            <button onclick="speakCurrentWord()" class="text-slate-400 hover:text-indigo-600 transition p-2 rounded-full hover:bg-slate-50" title="发音">
+                                <i class="fa-solid fa-volume-high text-lg"></i>
+                            </button>
+                        </div>
+                        <div class="text-center py-6">
+                            <h3 id="target-word-display" class="text-4xl font-extrabold text-slate-900 tracking-tight serif-font">Acknowledge</h3>
+                            <p id="word-phonetic" class="text-slate-400 text-sm mt-1">/əkˈnɒl.ɪdʒ/</p>
+                        </div>
+                    </div>
+
+                    <!-- Options injected dynamically -->
+                    <div class="space-y-3" id="options-container"></div>
+                </div>
+
+                <div class="flex justify-between items-center text-xs text-slate-400 px-2">
+                    <span>提示：选错立即归为不认识词汇</span>
+                    <button onclick="markCurrentAsUnknown()" class="hover:text-rose-500 transition font-medium flex items-center space-x-1">
+                        <i class="fa-solid fa-times-circle"></i>
+                        <span>直接认输(归为生词)</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 加载短文界面 -->
+        <section id="loading-screen" class="hidden space-y-8 my-auto text-center">
+            <div class="max-w-md mx-auto space-y-6">
+                <div class="relative inline-block">
+                    <div class="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center mx-auto text-indigo-600">
+                        <i class="fa-solid fa-wand-magic-sparkles text-4xl pulse-effect"></i>
+                    </div>
+                    <div class="absolute -top-1 -right-1 bg-amber-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md animate-bounce">
+                        <i class="fa-solid fa-brain text-sm"></i>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <h3 class="text-2xl font-bold text-slate-900">AI 正在编织极简情景故事...</h3>
+                    <p class="text-slate-500 text-sm">
+                        Gemini 正在将你刚积累的 <span class="text-indigo-600 font-bold">10个单词</span> 组装进一段生活画面感极强、句意简单的短文中，助你秒懂其用法。
+                    </p>
+                </div>
+                <!-- Word list packages -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">本次融汇生词</h4>
+                    <div id="loading-words-grid" class="flex flex-wrap gap-2 justify-center"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 语境阅读页面 -->
+        <section id="reading-screen" class="hidden space-y-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+                <div>
+                    <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full">情境场景抗遗忘阅读</span>
+                    <h2 id="story-title" class="text-2xl md:text-3xl font-bold text-slate-900 serif-font mt-2">The Unseen Catalyst</h2>
+                </div>
+                <div class="flex items-center space-x-2 self-start md:self-auto">
+                    <button onclick="speakEntireStory()" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-xl transition text-sm font-medium flex items-center space-x-2">
+                        <i class="fa-solid fa-volume-high"></i>
+                        <span>听故事发音</span>
+                    </button>
+                    <button onclick="resetToTesting()" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 rounded-xl transition text-sm font-medium flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>清空并重新背词</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Story Body -->
+            <div class="bg-white rounded-3xl border border-slate-100 shadow-xl p-6 md:p-10 relative overflow-hidden" id="story-container">
+                <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+                
+                <!-- 修复闭合标签 Bug 的指示条 -->
+                <div class="mb-6 bg-indigo-50/50 rounded-xl p-4 flex items-start space-x-3 text-xs md:text-sm text-indigo-800">
+                    <i class="fa-solid fa-circle-nodes mt-0.5 text-indigo-500"></i>
+                    <span>您可以随时点击高亮的雅思单词查看其中英释义。在阅读过程中，您还可以用鼠标任意划选任何单词进行智能查词发音。</span>
+                </div>
+
+                <!-- Interactive Story Body Content -->
+                <div id="story-body" class="serif-font text-lg md:text-xl text-slate-800 leading-relaxed space-y-6" onmouseup="detectTextSelection(event)">
+                    <!-- Injected via API -->
+                </div>
+
+                <!-- 开始通关测试按钮 -->
+                <div class="mt-8 pt-6 border-t border-slate-100 flex justify-center">
+                    <button onclick="startChallenge()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-2xl transition shadow-lg shadow-indigo-100 flex items-center justify-center space-x-3 transform hover:scale-105">
+                        <i class="fa-solid fa-circle-check text-lg"></i>
+                        <span>我已读完，开始通关测试！</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 译文隔离防护区 -->
+            <div class="pt-32 border-t border-slate-100">
+                <div class="text-center space-y-4">
+                    <i class="fa-solid fa-eye-slash text-3xl text-slate-300"></i>
+                    <h4 class="text-lg font-bold text-slate-800">双语全译文对照区</h4>
+                    <p class="text-sm text-slate-500 max-w-md mx-auto">
+                        为了避免您在阅读英文原文时无意间瞟到中文。我们设置了极长距离视觉屏障。如需查看译文，请点击下方按钮解除锁定。
+                    </p>
+                    <div class="pt-2">
+                        <button id="reveal-translation-btn" onclick="revealTranslation()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-6 rounded-xl transition text-sm inline-flex items-center space-x-2 shadow-md">
+                            <i class="fa-solid fa-lock-open"></i>
+                            <span>解除中文译文锁定</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Blurred Curtain -->
+                <div id="translation-wrapper" class="hidden mt-12 transition-all duration-700 opacity-0 transform translate-y-4">
+                    <div class="bg-emerald-50/40 border border-emerald-100 rounded-3xl p-6 md:p-10 space-y-6">
+                        <div class="flex items-center space-x-2 text-emerald-800">
+                            <i class="fa-solid fa-language text-xl"></i>
+                            <h5 class="font-bold text-base">参考译文 (Chinese Translation)</h5>
+                        </div>
+                        <div id="story-translation" class="text-slate-700 leading-relaxed text-base md:text-lg space-y-4">
+                            <!-- Translation content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 通关挑战测试页面 -->
+        <section id="challenge-screen" class="hidden space-y-6 my-auto">
+            <div class="max-w-xl mx-auto space-y-6">
+                <!-- Challenge Header -->
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase" id="challenge-progress">第 1 / 10 题</span>
+                    <button onclick="speakChallengeSentence()" class="text-slate-400 hover:text-indigo-600 transition p-2 rounded-full hover:bg-slate-50" title="听音朗读整句">
+                        <i class="fa-solid fa-volume-high text-lg"></i>
+                    </button>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div id="challenge-progress-bar" class="bg-indigo-600 h-full transition-all duration-300" style="width: 10%"></div>
+                </div>
+
+                <!-- Question Card -->
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 min-h-[300px] flex flex-col justify-between">
+                    <div class="space-y-6">
+                        <span class="text-xs font-semibold text-indigo-500 uppercase tracking-widest">CONTEXT CLOZE CHALLENGE</span>
+                        <h4 id="challenge-question-text" class="text-xl md:text-2xl text-slate-800 serif-font leading-relaxed font-medium">
+                            The team had to _______ their strategies to adapt to new rules.
+                        </h4>
+                    </div>
+
+                    <!-- Options (支持拼音词根形似及动态释义显现) -->
+                    <div class="space-y-4 mt-8" id="challenge-options-container"></div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="challenge-next-btn" onclick="nextChallengeQuestion()" class="hidden bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center space-x-2">
+                        <span>下一题</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 通关测试结果页面 -->
+        <section id="challenge-result-screen" class="hidden space-y-8 my-auto">
+            <div class="max-w-xl mx-auto bg-white border border-slate-100 rounded-3xl p-8 shadow-xl text-center space-y-6">
+                <div class="inline-block p-4 rounded-full bg-indigo-50 text-indigo-600">
+                    <i class="fa-solid fa-square-poll-vertical text-5xl"></i>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-2xl font-bold text-slate-900">通关测评报告</h3>
+                    <p class="text-slate-500 text-sm">通过实际例句语境检测，你的真实掌握情况如下：</p>
+                </div>
+
+                <!-- Statistics grid -->
+                <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+                        <span class="text-xs text-emerald-800 font-semibold block uppercase">已掌握 (过关)</span>
+                        <span id="result-mastered-count" class="text-3xl font-black text-emerald-600 serif-font">0</span>
+                    </div>
+                    <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4">
+                        <span class="text-xs text-rose-800 font-semibold block uppercase">需重修 (保留)</span>
+                        <span id="result-restudy-count" class="text-3xl font-black text-rose-600 serif-font">0</span>
+                    </div>
+                </div>
+
+                <!-- Details block -->
+                <div class="space-y-4 text-left border-t border-slate-100 pt-6">
+                    <div>
+                        <h5 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center space-x-1">
+                            <i class="fa-solid fa-check-circle text-emerald-500"></i>
+                            <span>完美掌握的单词（从生词表移除）</span>
+                        </h5>
+                        <div id="result-mastered-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <div class="pt-2">
+                        <h5 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center space-x-1">
+                            <i class="fa-solid fa-circle-exclamation text-rose-500"></i>
+                            <span>记忆模糊的单词（已重新打回生词池）</span>
+                        </h5>
+                        <div id="result-restudy-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="pt-4 border-t border-slate-100">
+                    <button onclick="backToWelcomeOrTesting()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-100 flex items-center justify-center space-x-2">
+                        <span>继续积累生词，开启新征程</span>
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 鼠标划词提示弹气泡 -->
+    <div id="text-selection-bubble" class="absolute z-50 bg-white border border-slate-200/80 rounded-2xl shadow-xl p-4 max-w-[280px] hidden transition-all duration-200">
+        <div class="flex justify-between items-start space-x-2 mb-2">
+            <span id="bubble-word-title" class="text-base font-bold text-indigo-600 truncate">Word</span>
+            <button id="bubble-speak-btn" class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 transition">
+                <i class="fa-solid fa-volume-high text-xs"></i>
+            </button>
+        </div>
+        <div class="space-y-2">
+            <div class="text-xs text-slate-500 border-b border-slate-100 pb-1 font-medium">智能划词分析</div>
+            <p id="bubble-definition" class="text-xs text-slate-700 leading-relaxed font-serif">Loading definition...</p>
+            <!-- Hover/Click reveal for bubble's Chinese -->
+            <div class="pt-1.5 border-t border-slate-100/60 flex flex-col">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                    <span>中文释义</span>
+                    <span class="text-amber-600 bg-amber-50 px-1 rounded">悬停显现</span>
+                </div>
+                <div class="relative overflow-hidden bg-slate-50 rounded-lg p-1.5 border border-slate-100">
+                    <p id="bubble-translation" class="text-xs text-emerald-800 font-semibold glass-blur select-none cursor-pointer" onclick="this.classList.toggle('unblurred')">
+                        Loading...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 单词详细翻译弹窗 (支持毛玻璃模糊解密) -->
+    <div id="definition-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300" id="definition-modal-card">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="flex items-center space-x-2.5">
+                    <span class="bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg">Oxford Dict</span>
+                    <span class="text-xs text-slate-400 font-medium">牛津高阶双语词典</span>
+                </div>
+                <button onclick="closeDefinitionModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable content -->
+            <div class="overflow-y-auto p-6 space-y-6 custom-scrollbar" id="modal-scroll-area">
+                <div>
+                    <div class="flex items-baseline justify-between">
+                        <h4 id="modal-word-title" class="text-3xl font-extrabold text-indigo-600 serif-font">Empower</h4>
+                        <button id="modal-speak-btn" class="text-slate-400 hover:text-indigo-600 transition p-2 rounded-full hover:bg-slate-100">
+                            <i class="fa-solid fa-volume-high text-lg"></i>
+                        </button>
+                    </div>
+                    <p id="modal-word-phonetic" class="text-slate-400 text-sm mt-1">/ɪmˈpaʊ.ər/</p>
+                </div>
+
+                <!-- Part 1: English Oxford Definition -->
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-2 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                        <i class="fa-solid fa-circle-info text-indigo-500"></i>
+                        <span>English Definition</span>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <p id="modal-eng-def" class="text-slate-800 font-medium leading-relaxed text-sm md:text-base">
+                            To give someone the authority or power to do something; to make someone stronger and more confident.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Part 2: Chinese Translation with Hover and Touch reveal -->
+                <div class="space-y-3 pt-4 border-t border-slate-100" id="chinese-def-section">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                            <i class="fa-solid fa-language text-emerald-500"></i>
+                            <span>中文释义</span>
+                        </div>
+                        <span class="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-medium">鼠标悬停或触摸解锁</span>
+                    </div>
+                    <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 relative overflow-hidden group">
+                        <p id="modal-zh-def" class="text-emerald-900 font-semibold text-base glass-blur select-none cursor-pointer" onclick="this.classList.toggle('unblurred')">
+                            授权，使能够；使更强大，使更有信心
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button onclick="closeDefinitionModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl transition text-sm">
+                    我知道了
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Modal -->
+    <div id="api-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 p-6 space-y-5 transform scale-95 opacity-0 transition-all duration-300" id="api-modal-card">
+            <div class="flex justify-between items-start">
+                <div class="space-y-1">
+                    <h3 class="text-xl font-bold text-slate-900">配置 Gemini API 密钥</h3>
+                    <p class="text-xs text-slate-500">此设置保存在本地，不上传服务器。</p>
+                </div>
+                <button onclick="toggleApiModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Gemini API Key</label>
+                    <input type="password" id="api-key-input" placeholder="输入以 AIzaSy 开头的密钥" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-500 leading-relaxed">
+                    <p><i class="fa-solid fa-info-circle text-indigo-500 mr-1"></i>留空此项亦可直接体验。系统会在画布运行期自动注入可用的 API Key 以提供顺畅支持。</p>
+                </div>
+            </div>
+
+            <div class="flex space-x-2 justify-end pt-2">
+                <button onclick="toggleApiModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition text-sm">
+                    取消
+                </button>
+                <button onclick="saveApiKey()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl transition text-sm shadow-md shadow-indigo-100">
+                    保存设置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-100 border-t border-slate-200/50 py-6 mt-12 text-center text-xs text-slate-400">
+        <div class="max-w-4xl mx-auto px-4 space-y-2">
+            <p>© 2026 IELTS Context. 语境记忆是应对雅思阅读与学术写作的最强手段。</p>
+            <p>基于 Google Gemini 3.1 强力驱动 | Oxford Bilingual Dictionary Database Integration</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- 100个精挑细选雅思高频经典大纲库 ---
+        const ieltsVocabularyDatabase = [
+            { word: "Acknowledge", phonetic: "/əkˈnɒl.ɪdʒ/", definition: "To accept or admit the existence or truth of something, or to confirm receipts.", translation: "承认；告知已收到；感谢" },
+            { word: "Ambiguous", phonetic: "/æmˈbɪɡ.ju.əs/", definition: "Open to more than one interpretation; not having one obvious meaning.", translation: "模棱两可的；不明确的" },
+            { word: "Advocate", phonetic: "/ˈæd.və.keɪt/", definition: "To publicly recommend or support a particular cause or policy.", translation: "提倡；主张；拥护" },
+            { word: "Biased", phonetic: "/ˈbaɪ.əst/", definition: "Unfairly prejudiced for or against someone or something.", translation: "有偏见的；偏向一方的" },
+            { word: "Collaborate", phonetic: "/kəˈlæb.ə.reɪt/", definition: "To work jointly on an activity or project, especially to produce or create something.", translation: "合作；协作" },
+            { word: "Compensate", phonetic: "/ˈkɒm.pən.seɪt/", definition: "To give someone something, typically money, in recognition of loss, suffering, or injury.", translation: "补偿；赔偿；弥补" },
+            { word: "Contradict", phonetic: "/ˌkɒn.trəˈdɪkt/", definition: "To deny the truth of a statement by asserting the opposite.", translation: "反驳；否定；与...相矛盾" },
+            { word: "Deviate", phonetic: "/ˈdiː.vi.eɪt/", definition: "To depart from an established course, standard, or accepted value.", translation: "偏离；背离" },
+            { word: "Empower", phonetic: "/ɪmˈpaʊ.ər/", definition: "To give someone the authority or power to do something; to make stronger.", translation: "授权；使能够；使更有信心" },
+            { word: "Fluctuate", phonetic: "/ˈflʌk.tʃu.eɪt/", definition: "To rise and fall irregularly in number or amount.", translation: "波动；起伏" },
+            { word: "Guarantee", phonetic: "/ˌɡær.ənˈtiː/", definition: "A formal assurance (typically in writing) that certain conditions will be fulfilled.", translation: "保证；担保" },
+            { word: "Hypothesis", phonetic: "/haɪˈpɒθ.ə.sɪs/", definition: "A proposed explanation made on the basis of limited evidence as a starting point.", translation: "假设；假说" },
+            { word: "Inevitable", phonetic: "/ɪˈnev.ɪ.tə.bəl/", definition: "Certain to happen; unavoidable.", translation: "不可避免的；必然发生的" },
+            { word: "Justify", phonetic: "/ˈdʒʌs.tɪ.faɪ/", definition: "To show or prove to be right, reasonable, or warranted.", translation: "证明...有理；辩护" },
+            { word: "Manipulate", phonetic: "/məˈnɪp.jə.leɪt/", definition: "To handle or control a tool or a situation in a clever, unfair, or unscrupulous way.", translation: "操纵；控制；影响" },
+            { word: "Objective", phonetic: "/əbˈdʒek.tɪv/", definition: "Not influenced by personal feelings or opinions in considering and representing facts.", translation: "客观的；真实的" },
+            { word: "Paradox", phonetic: "/ˈpær.ə.dɒks/", definition: "A seemingly absurd or self-contradictory statement or proposition that may prove to be true.", translation: "悖论；自相矛盾的人或事" },
+            { word: "Qualitative", phonetic: "/ˈkwɒl.ɪ.tə.tɪv/", definition: "Relating to, measuring, or measured by the quality of something rather than its quantity.", translation: "定性的；质量的" },
+            { word: "Reinforce", phonetic: "/ˌriː.ɪnˈfɔːs/", definition: "To strengthen or support an existing feeling, idea, or physical structure.", translation: "加强；加固；强化" },
+            { word: "Simulate", phonetic: "/ˈsɪm.jə.leɪt/", definition: "To imitate the appearance or character of something, or create a model.", translation: "模拟；模仿；假装" },
+            { word: "Tolerate", phonetic: "/ˈtɒl.ər.eɪt/", definition: "To allow the existence, occurrence, or practice of something without interference.", translation: "宽容；忍受；容许" },
+            { word: "Undermine", phonetic: "/ˌʌn.dəˈmaɪn/", definition: "To lessen the effectiveness, power, or ability of someone or something, especially gradually.", translation: "暗中破坏；逐渐削弱" },
+            { word: "Vulnerable", phonetic: "/ˈvʌl.nər.ə.bəl/", definition: "Susceptible to physical or emotional attack or harm.", translation: "易受攻击的；脆弱的" },
+            { word: "Acquire", phonetic: "/əˈkwaɪ.ər/", definition: "To buy or obtain an asset or object, or learn a skill/habit.", translation: "获得；学到" },
+            { word: "Adequate", phonetic: "/ˈæd.ɪ.kwət/", definition: "Satisfactory or acceptable in quality or quantity.", translation: "充足的；适当的；合格的" },
+            { word: "Coherent", phonetic: "/kəʊˈhɪə.rənt/", definition: "Logical and consistent; forming a unified whole.", translation: "条理清楚的；连贯的" },
+            { word: "Evaluate", phonetic: "/ɪˈvæl.ju.eɪt/", definition: "To form an idea of the amount, number, or value of; assess.", translation: "评估；评价" },
+            { word: "Implement", phonetic: "/ˈɪm.plɪ.ment/", definition: "To put a decision, plan, or agreement into effect.", translation: "实施；执行" },
+            { word: "Modify", phonetic: "/ˈmɒd.ɪ.faɪ/", definition: "To make partial or minor changes to something, especially to improve it.", translation: "修改；调整" },
+            { word: "Synthesize", phonetic: "/ˈsɪn.θə.saɪz/", definition: "To combine elements or ideas into a coherent whole.", translation: "合成；综合" },
+            { word: "Pragmatic", phonetic: "/præɡˈmæt.ɪk/", definition: "Dealing with things sensibly and realistically based on practical considerations.", translation: "务实的；注重实际的" },
+            { word: "Skeptical", phonetic: "/ˈskep.tɪ.kəl/", definition: "Not easily convinced; having doubts or reservations.", translation: "怀疑的；不相信的" },
+            { word: "Cognitive", phonetic: "/ˈkɒɡ.nɪ.tɪv/", definition: "Relating to the mental action or process of acquiring knowledge and understanding.", translation: "认知的；脑力的" },
+            { word: "Diminish", phonetic: "/dɪˈmɪn.ɪʃ/", definition: "To make or become less; decrease.", translation: "减少；削弱；贬低" },
+            { word: "Feasible", phonetic: "/ˈfiː.zə.bəl/", definition: "Possible to do easily or conveniently; practical.", translation: "可行的；可能的" },
+            { word: "Abstract", phonetic: "/ˈæb.strækt/", definition: "Existing in thought or as an idea but not having a physical or concrete existence.", translation: "抽象的；深奥的" },
+            { word: "Accumulate", phonetic: "/əˈkjuː.mjə.leɪt/", definition: "To gather together or acquire an increasing number or quantity of.", translation: "积累；积聚" },
+            { word: "Alleviate", phonetic: "/əˈliː.vi.eɪt/", definition: "To make suffering, deficiency, or a problem less severe.", translation: "减轻；缓和" },
+            { word: "Arbitrary", phonetic: "/ˈɑː.bɪ.trər.i/", definition: "Based on random choice or personal whim, rather than any reason or system.", translation: "任意的；武断的" },
+            { word: "Attribute", phonetic: "/əˈtrɪb.juːt/", definition: "To regard something as being caused by someone or something.", translation: "归因于；属性；特质" },
+            { word: "Beneficial", phonetic: "/ˌben.ɪˈfɪʃ.əl/", definition: "Favorable or advantageous; resulting in good.", translation: "有益的；有利的" },
+            { word: "Chronological", phonetic: "/ˌkrɒn.əˈlɒdʒ.ɪ.kəl/", definition: "Starting with the earliest and following the order in which they occurred.", translation: "按时间顺序的" },
+            { word: "Commend", phonetic: "/kəˈmend/", definition: "To praise formally or officially; to recommend.", translation: "称赞；表扬；推荐" },
+            { word: "Comprehensive", phonetic: "/ˌkɒm.prɪˈhen.sɪv/", definition: "Complete, including all or nearly all elements or aspects of something.", translation: "全面的；广泛的" },
+            { word: "Concede", phonetic: "/kənˈsiːd/", definition: "To admit that something is true or valid after first denying or resisting it.", translation: "让步；承认" },
+            { word: "Consensus", phonetic: "/kənˈsen.səs/", definition: "A general agreement among a group of people.", translation: "共识；一致同意" },
+            { word: "Constrain", phonetic: "/kənˈstreɪn/", definition: "To severely restrict the scope, extent, or activity of.", translation: "束缚；限制；强迫" },
+            { word: "Credible", phonetic: "/ˈkred.ə.bəl/", definition: "Able to be believed; convincing.", translation: "可靠的；可信的" },
+            { word: "Crucial", phonetic: "/ˈkruː.ʃəl/", definition: "Of great importance; decisive or critical, especially in the success of something.", translation: "至关重要的" },
+            { word: "Decisive", phonetic: "/dɪˈsaɪ.sɪv/", definition: "Settling an issue; producing a definite result; showing determination.", translation: "决定性的；果断的" },
+            { word: "Depict", phonetic: "/dɪˈpɪkt/", definition: "To represent by a drawing, painting, or other art form; describe in words.", translation: "描绘；描述" },
+            { word: "Derive", phonetic: "/dɪˈraɪv/", definition: "To obtain something from a specified source.", translation: "源于；获得；衍生" },
+            { word: "Deteriorate", phonetic: "/dɪˈtɪə.ri.ə.reɪt/", definition: "To become progressively worse.", translation: "恶化；变坏" },
+            { word: "Devise", phonetic: "/dɪˈvaɪz/", definition: "To plan or invent a complex procedure, system, or mechanism by careful thought.", translation: "设计；发明；想出" },
+            { word: "Discrepancy", phonetic: "/dɪˈskrep.ən.si/", definition: "An illogical or surprising lack of compatibility or similarity between two facts.", translation: "不符；矛盾；差异" },
+            { word: "Distort", phonetic: "/dɪˈskɔːt/", definition: "To pull or twist out of shape; to give a misleading account of.", translation: "扭曲；变形；歪曲" },
+            { word: "Diverse", phonetic: "/daɪˈvɜːs/", definition: "Showing a great deal of variety; very different.", translation: "多样的；不同的" },
+            { word: "Dynamic", phonetic: "/daɪˈnæm.ɪk/", definition: "Constant change, activity, or progress; having a lot of energy.", translation: "动态的；有活力的" },
+            { word: "Elucidate", phonetic: "/iˈluː.sɪ.deɪt/", definition: "To make something clear; explain.", translation: "阐明；解释" },
+            { word: "Eminent", phonetic: "/ˈem.ɪ.nənt/", definition: "Famous and respected within a particular sphere or profession.", translation: "杰出的；著名的" },
+            { word: "Empirical", phonetic: "/ɪmˈpɪr.ɪ.kəl/", definition: "Based on observation or experience rather than theory or pure logic.", translation: "实证的；凭经验的" },
+            { word: "Endeavor", phonetic: "/ɪnˈdev.ər/", definition: "To try hard to do or achieve something; an earnest attempt.", translation: "努力；尝试；事业" },
+            { word: "Enhance", phonetic: "/ɪnˈhɑːns/", definition: "To intensify, increase, or further improve the quality, value, or extent of.", translation: "提高；增强" },
+            { word: "Equivalent", phonetic: "/ɪˈkwɪv.əl.ənt/", definition: "Equal in value, amount, function, meaning, etc.", translation: "等价的；相等的" },
+            { word: "Eradicate", phonetic: "/ɪˈræd.ɪ.keɪt/", definition: "To destroy completely; put an end to.", translation: "根除；消灭" },
+            { word: "Evident", phonetic: "/ˈev.ɪ.dənt/", definition: "Plain or obvious; clearly seen or understood.", translation: "明显的；显然的" },
+            { word: "Exaggerate", phonetic: "/ɪɡˈzædʒ.ə.reɪt/", definition: "To represent something as being larger, better, or worse than it really is.", translation: "夸大；夸张" },
+            { word: "Exclude", phonetic: "/ɪkˈskluːd/", definition: "To deny someone or something access to or bar from a place or group.", translation: "排除；排除在外" },
+            { word: "Exemplify", phonetic: "/ɪɡˈzem.plɪ.faɪ/", definition: "To be a typical example of something.", translation: "举例说明；是...的典型" },
+            { word: "Explicit", phonetic: "/ɪkˈsplɪs.ɪt/", definition: "Stated clearly and in detail, leaving no room for confusion or doubt.", translation: "明确的；直率的" },
+            { word: "Exploit", phonetic: "/ɪkˈsplɔɪt/", definition: "To make full use of and derive benefit from a resource; use unfairly.", translation: "剥削；开发；利用" },
+            { word: "Finite", phonetic: "/ˈfaɪ.naɪt/", definition: "Having limits or bounds; not infinite.", translation: "有限的；有尽的" },
+            { word: "Formidable", phonetic: "/fɔːˈmɪd.ə.bəl/", definition: "Inspiring fear or respect through being impressively large, powerful, or intense.", translation: "可怕的；令人敬畏的" },
+            { word: "Gratify", phonetic: "/ˈɡræt.ɪ.faɪ/", definition: "To give someone pleasure or satisfaction; indulge a desire.", translation: "使满足；使高兴" },
+            { word: "Hostile", phonetic: "/ˈhɒs.taɪl/", definition: "Unfriendly; antagonistic; opposed.", translation: "敌对的；不友好的" },
+            { word: "Illuminate", phonetic: "/ɪˈluː.mɪ.neɪt/", definition: "To light up; help to clarify or explain.", translation: "照亮；阐明" },
+            { word: "Impediment", phonetic: "/ɪmˈped.ɪ.mənt/", definition: "A hindrance or obstruction in doing something.", translation: "妨碍；阻碍" },
+            { word: "Implicit", phonetic: "/ɪmˈplɪs.ɪt/", definition: "Implied though not plainly expressed; absolute.", translation: "含蓄的；暗示的" },
+            { word: "Indifferent", phonetic: "/ɪnˈdɪf.ər.ənt/", definition: "Having no particular interest or sympathy; unconcerned.", translation: "冷漠的；不关心的" },
+            { word: "Indigenous", phonetic: "/ɪnˈdɪdʒ.ɪ.nəs/", definition: "Originating or occurring naturally in a particular place; native.", translation: "本土的；土著的" },
+            { word: "Inherent", phonetic: "/ɪnˈhɪə.rənt/", definition: "Existing in something as a permanent, essential, or characteristic attribute.", translation: "固有的；内在的" },
+            { word: "Inhibit", phonetic: "/ɪnˈhɪb.ɪt/", definition: "To hinder, restrain, or prevent an action or process.", translation: "抑制；禁止" },
+            { word: "Innovate", phonetic: "/ˈɪn.ə.veɪt/", definition: "To make changes in something established, especially by introducing new methods.", translation: "创新；革新" },
+            { word: "Integrate", phonetic: "/ˈɪn.tɪ.ɡreɪt/", definition: "To combine one thing with another so that they become a whole.", translation: "整合；使一体化" },
+            { word: "Intricate", phonetic: "/ˈɪn.trɪ.kət/", definition: "Very detailed; complicated or detailed.", translation: "错综复杂的；精细的" },
+            { word: "Intrinsic", phonetic: "/ɪnˈtrɪn.zɪk/", definition: "Belonging naturally; essential.", translation: "本质的；固有的" },
+            { word: "Magnitude", phonetic: "/ˈmæɡ.nɪ.tʃuːd/", definition: "The great size or extent of something; importance.", translation: "巨大；重要性；震级" },
+            { word: "Manifest", phonetic: "/ˈmæn.ɪ.fest/", definition: "Clear or obvious to the eye or mind; to display or show.", translation: "显现；明显的" },
+            { word: "Marginal", phonetic: "/ˈmɑː.dʒɪ.nəl/", definition: "Relating to or at the edge or margin; minimal.", translation: "边缘的；微不足道的" },
+            { word: "Negligible", phonetic: "/ˈneɡ.lɪ.dʒə.bəl/", definition: "So small or unimportant as to be not worth considering; insignificant.", translation: "微不足道的" },
+            { word: "Nuance", phonetic: "/ˈnjuː.ɑːns/", definition: "A subtle distinction or variation in shade of meaning or expression.", translation: "细微差别" },
+            { word: "Obstacle", phonetic: "/ˈɒb.stə.kəl/", definition: "A thing that blocks one's way or prevents progress.", translation: "障碍；绊脚石" },
+            { word: "Offset", phonetic: "/ˈɒf.set/", definition: "To counteract something by having an opposing force or effect.", translation: "抵消；弥补" },
+            { word: "Optimistic", phonetic: "/ˌɒp.tɪˈmɪs.tɪk/", definition: "Hopeful and confident about the future.", translation: "乐观的" },
+            { word: "Passive", phonetic: "/ˈpæs.ɪv/", definition: "Accepting or allowing what happens without active response or resistance.", translation: "被动的；消极的" },
+            { word: "Plausible", phonetic: "/ˈplɔː.zə.bəl/", definition: "Seeming reasonable or probable.", translation: "合理的；似有道理的" },
+            { word: "Prevalent", phonetic: "/ˈprev.əl.ənt/", definition: "Widespread in a particular area or at a particular time.", translation: "流行的；普遍的" },
+            { word: "Profound", phonetic: "/prəˈfaʊnd/", definition: "Very great or intense; having great knowledge or insight.", translation: "深远的；渊博的" },
+            { word: "Reluctance", phonetic: "/rɪˈlʌk.təns/", definition: "Unwillingness or hesitancy to do something.", translation: "不情愿；勉强" },
+            { word: "Spontaneous", phonetic: "/spɒnˈteɪ.ni.əs/", definition: "Performed or occurring as a result of a sudden impulse rather than plan.", translation: "自发的；无意识的" }
+        ];
+
+        // --- 运行状态管理 ---
+        let currentQueue = []; 
+        let knownWordsCount = 0;
+        let unknownWordsCount = 0;
+        let wordPointer = 0; 
+        let currentTestWord = null;
+        let generatedStory = null; 
+
+        // --- 完形填空测试状态管理 ---
+        let challengeQuestions = [];
+        let currentQuestionIndex = 0;
+        let challengeResults = { mastered: [], restudy: [] };
+
+        // --- 初始化基础逻辑 ---
+        window.onload = function() {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
+            }
+            updateStatsUI();
+        };
+
+        // --- 背词模式流程控制 ---
+        function startSession() {
+            shuffleArray(ieltsVocabularyDatabase);
+            wordPointer = 0;
+            currentQueue = [];
+            knownWordsCount = 0;
+            unknownWordsCount = 0;
+            
+            showScreen('testing-screen');
+            loadNextWordToTest();
+            updateStatsUI();
+        }
+
+        function loadNextWordToTest() {
+            if (currentQueue.length >= 10) {
+                triggerStoryGeneration();
+                return;
+            }
+
+            if (wordPointer >= ieltsVocabularyDatabase.length) {
+                shuffleArray(ieltsVocabularyDatabase);
+                wordPointer = 0;
+            }
+
+            currentTestWord = ieltsVocabularyDatabase[wordPointer];
+            wordPointer++;
+
+            if (currentQueue.some(w => w.word === currentTestWord.word)) {
+                loadNextWordToTest();
+                return;
+            }
+
+            renderWordTestCard(currentTestWord);
+        }
+
+        function renderWordTestCard(wordObj) {
+            document.getElementById('target-word-display').innerText = wordObj.word;
+            document.getElementById('word-phonetic').innerText = wordObj.phonetic;
+
+            // 筛选形似的本地干扰词（防止无脑选对）
+            const distractors = getSimilarWords(wordObj.word, 3).map(w => w.translation);
+
+            const options = [wordObj.translation, ...distractors];
+            shuffleArray(options);
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            options.forEach((opt, index) => {
+                const label = String.fromCharCode(65 + index);
+                const button = document.createElement('button');
+                button.className = "w-full text-left bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl px-5 py-3.5 transition flex items-center justify-between group";
+                button.onclick = () => checkAnswer(opt, wordObj.translation, button);
+                button.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-7 h-7 rounded-lg bg-slate-200 group-hover:bg-indigo-200 text-slate-700 group-hover:text-indigo-800 flex items-center justify-center font-bold text-sm">${label}</span>
+                        <span class="text-slate-700 font-medium">${opt}</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-indigo-400 text-sm"></i>
+                `;
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedOpt, correctOpt, buttonEl) {
+            const buttons = document.querySelectorAll('#options-container button');
+            buttons.forEach(b => b.disabled = true);
+
+            if (selectedOpt === correctOpt) {
+                buttonEl.classList.remove('border-slate-200', 'hover:bg-indigo-50');
+                buttonEl.classList.add('bg-emerald-500', 'border-emerald-500', 'text-white');
+                buttonEl.querySelector('span:first-child').className = "w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm";
+                buttonEl.querySelector('span:nth-child(2)').className = "text-white font-semibold";
+                buttonEl.querySelector('i').className = "fa-solid fa-circle-check text-white text-base";
+                
+                knownWordsCount++;
+                setTimeout(() => {
+                    loadNextWordToTest();
+                    updateStatsUI();
+                }, 800);
+            } else {
+                buttonEl.classList.remove('border-slate-200', 'hover:bg-indigo-50');
+                buttonEl.classList.add('bg-rose-500', 'border-rose-500', 'text-white');
+                buttonEl.querySelector('span:first-child').className = "w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-sm";
+                buttonEl.querySelector('span:nth-child(2)').className = "text-white font-semibold";
+                buttonEl.querySelector('i').className = "fa-solid fa-circle-xmark text-white text-base";
+
+                buttons.forEach(b => {
+                    if (b.innerText.includes(correctOpt)) {
+                        b.classList.add('border-emerald-500', 'bg-emerald-50');
+                    }
+                });
+
+                markCurrentAsUnknown();
+            }
+        }
+
+        function markCurrentAsUnknown() {
+            if (!currentQueue.some(w => w.word === currentTestWord.word)) {
+                currentQueue.push(currentTestWord);
+                unknownWordsCount++;
+            }
+            updateStatsUI();
+
+            setTimeout(() => {
+                loadNextWordToTest();
+            }, 1000);
+        }
+
+        // --- 拼写、字形与前缀形似词本地筛选算法 (Feedback 2) ---
+        function getSimilarWords(targetWord, count = 3) {
+            let pool = ieltsVocabularyDatabase.filter(w => w.word.toLowerCase() !== targetWord.toLowerCase());
+            
+            pool.forEach(w => {
+                let score = 0;
+                // 1. 首字母相同
+                if (w.word[0].toLowerCase() === targetWord[0].toLowerCase()) score += 15;
+                // 2. 前缀两个字母相同
+                if (w.word.slice(0, 2).toLowerCase() === targetWord.slice(0, 2).toLowerCase()) score += 20;
+                // 3. 后缀两个字母相同 (比如常见的 -ate, -ive, -able)
+                if (w.word.slice(-2).toLowerCase() === targetWord.slice(-2).toLowerCase()) score += 8;
+                // 4. 词干长度差越小越好 (长度惩罚项)
+                score -= Math.abs(w.word.length - targetWord.length) * 2;
+                w._tempScore = score;
+            });
+
+            pool.sort((a, b) => b._tempScore - a._tempScore);
+            return pool.slice(0, count);
+        }
+
+        // --- 核心：极简情景化 AI 写作与 完形填空问题生成 (Prompt 全面升级干扰选项契合字形) ---
+        async function triggerStoryGeneration() {
+            showScreen('loading-screen');
+            
+            const grid = document.getElementById('loading-words-grid');
+            grid.innerHTML = '';
+            currentQueue.forEach(item => {
+                const el = document.createElement('span');
+                el.className = "bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs px-3 py-1.5 rounded-full font-semibold flex items-center space-x-1";
+                el.innerHTML = `<i class="fa-solid fa-bookmark text-[10px]"></i> <span>${item.word}</span>`;
+                grid.appendChild(el);
+            });
+
+            const apiKey = localStorage.getItem('gemini_api_key') || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const wordsListText = currentQueue.map(w => w.word).join(', ');
+            
+            const systemPrompt = "You are an elite IELTS tutor who excels at designing challenging vocabulary cloze-tests and short intuitive daily stories.";
+            
+            const userQuery = `Write a short, simple, high-imagery scenario story (around 120-160 words) incorporating these 10 words: [${wordsListText}]. Additionally, generate 10 cloze questions (one for each word).
+
+CRITICAL INSTRUCTIONS FOR CLOZE OPTIONS (DISTRACTORS):
+- The 4 English choices for each question MUST look orthographically or morphologically VERY SIMILAR to the correct target word.
+- Example: If target word is "Collaborate", the other 3 distractors MUST be words like "Compensate", "Cognitive", "Commend" (same prefix/roots or visual length). Do NOT use totally unrelated words like "Vulnerable" or "Objective". This makes it impossible to guess by simple visual elimination!
+- Provide exact Chinese translation for ALL the 4 options in the same index order inside "options_translation".
+
+SCHEMA DETAILS:
+1. In the "story" key: Wrap every target word with: <span class='target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded' data-word='Word'>Word</span>
+2. In the "translation" key: Provide plain Chinese translation of the story. Do NOT put HTML tags here.
+3. In the "questions" array: Generate exactly 10 cloze questions. For each:
+   - "target_word": Target word string.
+   - "cloze_sentence": A simple daily life sentence with target word replaced by "_______".
+   - "options": Array of 4 similar-looking English words (including correct one).
+   - "options_translation": Array of 4 precise Chinese translations in the exact same array order.
+   - "correct_answer": The target word itself.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            title: { type: "STRING" },
+                            story: { type: "STRING" },
+                            translation: { type: "STRING" },
+                            questions: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        target_word: { type: "STRING" },
+                                        cloze_sentence: { type: "STRING" },
+                                        options: {
+                                            type: "ARRAY",
+                                            items: { type: "STRING" }
+                                        },
+                                        options_translation: {
+                                            type: "ARRAY",
+                                            items: { type: "STRING" }
+                                        },
+                                        correct_answer: { type: "STRING" }
+                                    },
+                                    required: ["target_word", "cloze_sentence", "options", "options_translation", "correct_answer"]
+                                }
+                            }
+                        },
+                        required: ["title", "story", "translation", "questions"]
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) throw new Error("Invalid response format");
+
+                generatedStory = JSON.parse(jsonText);
+                renderInteractiveStory();
+
+            } catch (err) {
+                console.error("API Error, using fallback:", err);
+                fallbackStoryGeneration();
+            }
+        }
+
+        // --- 备用降级本地场景化算法（带形似干扰词与选项翻译） ---
+        function fallbackStoryGeneration() {
+            showStatusToast("正在本地为您组装形似词测试套件...", "info");
+            
+            const wordsUsed = currentQueue.map(w => w.word);
+            
+            let simulatedParagraph = `Last Sunday, we decided to <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[0] || 'Acknowledge'}">${wordsUsed[0] || 'Acknowledge'}</span> our mistakes and clean the messy garden. The task was <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[1] || 'Ambiguous'}">${wordsUsed[1] || 'Ambiguous'}</span> because we had no clear plan. However, Dad began to <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[2] || 'Advocate'}">${wordsUsed[2] || 'Advocate'}</span> for teamwork. Some neighbors were <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[3] || 'Biased'}">${wordsUsed[3] || 'Biased'}</span>, thinking we would fail. But when we chose to <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[4] || 'Collaborate'}">${wordsUsed[4] || 'Collaborate'}</span>, we succeeded. We got delicious pizza to <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[5] || 'Compensate'}">${wordsUsed[5] || 'Compensate'}</span> for our hard work. This result seemed to <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[6] || 'Contradict'}">${wordsUsed[6] || 'Contradict'}</span> their worries. Although we did <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[7] || 'Deviate'}">${wordsUsed[7] || 'Deviate'}</span> from our time schedule, this fun day did <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[8] || 'Empower'}">${wordsUsed[8] || 'Empower'}</span> us to try more outdoor actions. In the end, our happiness did not <span class="target-word font-semibold text-indigo-600 underline decoration-indigo-300 decoration-2 underline-offset-4 cursor-pointer hover:bg-indigo-50 transition px-1 rounded" data-word="${wordsUsed[9] || 'Fluctuate'}">${wordsUsed[9] || 'Fluctuate'}</span> at all.`;
+            
+            let simulatedTranslation = `上周日，我们决定承认错误，打扫花园。这项任务之前很模糊，因为没有明确的计划。然而，爸爸提倡团队协作。有些邻居抱有偏见，认为我们会失败。但是，当我们合作时，我们成功了。我们买到了披萨来弥补辛苦。这一美好的结果反驳了邻居们的顾虑。虽然我们的时间有些偏差，但这个快乐的日子赋予了我们尝试更多户外活动的信心。最终，我们的快乐没有发生波动。`;
+
+            // 本地生成降级问题库
+            const fallbackQuestions = currentQueue.map(item => {
+                // 精准筛选视觉形似词
+                const simWords = getSimilarWords(item.word, 3);
+                
+                const options = [item.word, ...simWords.map(w => w.word)];
+                
+                // 获取对应的中文字典翻译
+                const transMap = {};
+                transMap[item.word] = item.translation;
+                simWords.forEach(w => {
+                    transMap[w.word] = w.translation;
+                });
+
+                // 打乱
+                shuffleArray(options);
+                const optionsTrans = options.map(opt => transMap[opt] || "未知");
+
+                return {
+                    target_word: item.word,
+                    cloze_sentence: `Identify the word that fits this context: "${item.definition}"`,
+                    options: options,
+                    options_translation: optionsTrans,
+                    correct_answer: item.word
+                };
+            });
+
+            generatedStory = {
+                title: "A Sunny Weekend Project",
+                story: simulatedParagraph,
+                translation: simulatedTranslation,
+                questions: fallbackQuestions
+            };
+
+            renderInteractiveStory();
+        }
+
+        function renderInteractiveStory() {
+            showScreen('reading-screen');
+            document.getElementById('story-title').innerText = generatedStory.title;
+            document.getElementById('story-body').innerHTML = generatedStory.story;
+            document.getElementById('story-translation').innerText = generatedStory.translation;
+
+            document.getElementById('translation-wrapper').classList.add('hidden', 'opacity-0');
+            document.getElementById('translation-wrapper').classList.add('translate-y-4');
+            
+            const revealBtn = document.getElementById('reveal-translation-btn');
+            revealBtn.className = "bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-xl transition text-sm inline-flex items-center space-x-2 shadow-md";
+            revealBtn.innerHTML = `<i class="fa-solid fa-lock-open"></i> <span>解除中文译文锁定</span>`;
+            revealBtn.disabled = false;
+
+            // 标记词点击触发牛津卡片
+            document.querySelectorAll('.target-word').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const rawWord = e.target.getAttribute('data-word');
+                    openDefinitionModal(rawWord);
+                });
+            });
+        }
+
+        // --- 完形填空测评引擎逻辑 (实现答对/答错展现四词中文大片) ---
+        function startChallenge() {
+            challengeQuestions = generatedStory.questions || [];
+            if (challengeQuestions.length === 0) {
+                fallbackStoryGeneration();
+                challengeQuestions = generatedStory.questions;
+            }
+            
+            currentQuestionIndex = 0;
+            challengeResults = { mastered: [], restudy: [] };
+            showScreen('challenge-screen');
+            renderChallengeQuestion();
+        }
+
+        function renderChallengeQuestion() {
+            if (currentQuestionIndex >= challengeQuestions.length) {
+                showChallengeResults();
+                return;
+            }
+
+            const q = challengeQuestions[currentQuestionIndex];
+            document.getElementById('challenge-progress').innerText = `第 ${currentQuestionIndex + 1} / ${challengeQuestions.length} 题`;
+            document.getElementById('challenge-progress-bar').style.width = `${((currentQuestionIndex + 1) / challengeQuestions.length) * 100}%`;
+            document.getElementById('challenge-question-text').innerText = q.cloze_sentence;
+
+            const optionsContainer = document.getElementById('challenge-options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const label = String.fromCharCode(65 + index);
+                const trans = q.options_translation ? q.options_translation[index] : "暂无解释";
+                const button = document.createElement('button');
+                button.className = "w-full text-left bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-300 rounded-2xl px-5 py-4 transition duration-300 flex flex-col group text-sm md:text-base shadow-sm relative overflow-hidden";
+                button.onclick = () => submitChallengeAnswer(opt, q.correct_answer, button);
+                button.innerHTML = `
+                    <div class="flex items-center justify-between w-full">
+                        <div class="flex items-center space-x-3 text-left">
+                            <span class="w-7 h-7 rounded-lg bg-slate-200 group-hover:bg-indigo-200 text-slate-700 group-hover:text-indigo-800 flex items-center justify-center font-bold text-xs">${label}</span>
+                            <div class="flex flex-col">
+                                <span class="text-slate-800 font-semibold tracking-wide">${opt}</span>
+                                <!-- 选项翻译容器：初次隐藏，选择完毕后动态展开 -->
+                                <span class="challenge-opt-trans text-xs font-medium text-slate-500 mt-1 max-h-0 opacity-0 overflow-hidden transition-all duration-500 block">
+                                    <i class="fa-solid fa-arrow-right-long text-[10px] mr-1 text-indigo-400"></i> ${trans}
+                                </span>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-circle-question text-slate-300 group-hover:text-indigo-400 text-sm transition duration-300"></i>
+                    </div>
+                `;
+                optionsContainer.appendChild(button);
+            });
+
+            document.getElementById('challenge-next-btn').classList.add('hidden');
+        }
+
+        function submitChallengeAnswer(selectedOpt, correctOpt, buttonEl) {
+            const buttons = document.querySelectorAll('#challenge-options-container button');
+            
+            // 禁用点击，防止二次选择
+            buttons.forEach(b => b.disabled = true);
+
+            const currentWordStr = challengeQuestions[currentQuestionIndex].target_word;
+            const wordObj = currentQueue.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase()) || 
+                            ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase());
+
+            // 1. 高亮正确与错误项
+            buttons.forEach(btn => {
+                const optText = btn.querySelector('span.text-slate-800').innerText.trim();
+                const icon = btn.querySelector('i');
+                const badge = btn.querySelector('span:first-child');
+
+                if (optText === correctOpt) {
+                    // 正确选项
+                    btn.classList.add('bg-emerald-500/10', 'border-emerald-500', 'ring-2', 'ring-emerald-200');
+                    badge.className = "w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-xs";
+                    icon.className = "fa-solid fa-circle-check text-emerald-500 text-base";
+                } else if (optText === selectedOpt && selectedOpt !== correctOpt) {
+                    // 选错的项
+                    btn.classList.add('bg-rose-500/10', 'border-rose-500');
+                    badge.className = "w-7 h-7 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold text-xs";
+                    icon.className = "fa-solid fa-circle-xmark text-rose-500 text-base";
+                } else {
+                    btn.classList.add('opacity-70');
+                }
+            });
+
+            // 2. 核心：动态揭秘所有4个选项的中文释义 (Feedback 3)
+            const transLabels = document.querySelectorAll('.challenge-opt-trans');
+            transLabels.forEach(label => {
+                label.classList.remove('max-h-0', 'opacity-0');
+                label.classList.add('max-h-12', 'opacity-100');
+                // 让正确单词的释义显示绿色，提高重点认知度
+                if (label.closest('button').classList.contains('border-emerald-500')) {
+                    label.classList.remove('text-slate-500');
+                    label.classList.add('text-emerald-700', 'font-semibold');
+                }
+            });
+
+            // 归档状态
+            if (selectedOpt === correctOpt) {
+                if (wordObj && !challengeResults.mastered.some(w => w.word === wordObj.word)) {
+                    challengeResults.mastered.push(wordObj);
+                }
+            } else {
+                if (wordObj && !challengeResults.restudy.some(w => w.word === wordObj.word)) {
+                    challengeResults.restudy.push(wordObj);
+                }
+            }
+
+            document.getElementById('challenge-next-btn').classList.remove('hidden');
+        }
+
+        function nextChallengeQuestion() {
+            // 防御未归类分配的情况
+            const currentWordStr = challengeQuestions[currentQuestionIndex].target_word;
+            const wordObj = currentQueue.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase()) || 
+                            ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === currentWordStr.toLowerCase());
+            
+            if (wordObj) {
+                const isMastered = challengeResults.mastered.some(w => w.word === wordObj.word);
+                const isRestudy = challengeResults.restudy.some(w => w.word === wordObj.word);
+                if (!isMastered && !isRestudy) {
+                    challengeResults.restudy.push(wordObj);
+                }
+            }
+
+            currentQuestionIndex++;
+            renderChallengeQuestion();
+        }
+
+        function showChallengeResults() {
+            showScreen('challenge-result-screen');
+            
+            const masteredCount = challengeResults.mastered.length;
+            const restudyCount = challengeResults.restudy.length;
+
+            document.getElementById('result-mastered-count').innerText = masteredCount;
+            document.getElementById('result-restudy-count').innerText = restudyCount;
+
+            // 已掌握
+            const masteredList = document.getElementById('result-mastered-list');
+            masteredList.innerHTML = '';
+            if (masteredCount === 0) {
+                masteredList.innerHTML = `<p class="text-xs text-slate-400 italic">加油，下次争取斩获全对！</p>`;
+            } else {
+                challengeResults.mastered.forEach(item => {
+                    const badge = document.createElement('span');
+                    badge.className = "bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs px-3 py-1.5 rounded-full font-semibold";
+                    badge.innerText = item.word;
+                    masteredList.appendChild(badge);
+                });
+            }
+
+            // 扔回池子重修的词
+            const restudyList = document.getElementById('result-restudy-list');
+            restudyList.innerHTML = '';
+            if (restudyCount === 0) {
+                restudyList.innerHTML = `<p class="text-xs text-slate-400 italic">天才诞生！本次10个极近形考题完美全对通过！</p>`;
+            } else {
+                challengeResults.restudy.forEach(item => {
+                    const badge = document.createElement('span');
+                    badge.className = "bg-rose-50 border border-rose-100 text-rose-800 text-xs px-3 py-1.5 rounded-full font-semibold";
+                    badge.innerText = item.word;
+                    restudyList.appendChild(badge);
+                });
+            }
+
+            // 1. 已答对的，加到熟词总数统计中。
+            knownWordsCount += masteredCount;
+            
+            // 2. 答错的直接重修：重修列表重新作为 active currentQueue（积攒生词池）
+            currentQueue = [...challengeResults.restudy];
+
+            updateStatsUI();
+        }
+
+        function speakChallengeSentence() {
+            if (challengeQuestions[currentQuestionIndex]) {
+                const rawSent = challengeQuestions[currentQuestionIndex].cloze_sentence;
+                const speakableText = rawSent.replace(/_______/g, 'blank');
+                speakText(speakableText, 0.9);
+            }
+        }
+
+        function backToWelcomeOrTesting() {
+            if (currentQueue.length > 0) {
+                showScreen('testing-screen');
+                loadNextWordToTest();
+            } else {
+                showScreen('welcome-screen');
+            }
+        }
+
+        // --- 划词翻译引擎逻辑与智能气泡 ---
+        async function detectTextSelection(e) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText.length >= 2 && selectedText.length < 25 && /^[a-zA-Z]+-?[a-zA-Z]*$/.test(selectedText)) {
+                showSelectionBubble(selectedText, e);
+            } else {
+                hideSelectionBubble();
+            }
+        }
+
+        async function showSelectionBubble(wordStr, event) {
+            const bubble = document.getElementById('text-selection-bubble');
+            
+            bubble.style.left = `${event.pageX}px`;
+            bubble.style.top = `${event.pageY + 15}px`;
+            bubble.classList.remove('hidden');
+
+            document.getElementById('bubble-word-title').innerText = wordStr;
+            document.getElementById('bubble-definition').innerText = "Analyzing Oxford context...";
+            
+            const transEl = document.getElementById('bubble-translation');
+            transEl.classList.add('glass-blur');
+            transEl.classList.remove('unblurred');
+            transEl.innerText = "正在解密...";
+
+            document.getElementById('bubble-speak-btn').onclick = () => speakText(wordStr);
+
+            // 1. 本地匹配 
+            let matched = ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === wordStr.toLowerCase());
+            if (matched) {
+                document.getElementById('bubble-definition').innerText = matched.definition;
+                transEl.innerText = matched.translation;
+                return;
+            }
+
+            // 2. 联网匹配
+            const apiKey = localStorage.getItem('gemini_api_key') || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const queryText = `Provide the brief dictionary entries for word: "${wordStr}". Give a short English definition (under 12 words) and a precise Chinese translation (under 10 characters). Deliver output strictly in JSON. format: {"en": "definition", "zh": "translation"}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: queryText }] }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    en: { type: "STRING" },
+                                    zh: { type: "STRING" }
+                                },
+                                required: ["en", "zh"]
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const resJson = await response.json();
+                    const data = JSON.parse(resJson.candidates[0].content.parts[0].text);
+                    document.getElementById('bubble-definition').innerText = data.en;
+                    transEl.innerText = data.zh;
+                } else {
+                    throw new Error();
+                }
+            } catch (err) {
+                document.getElementById('bubble-definition').innerText = "Failed to fetch English definition.";
+                transEl.innerText = "翻译暂缺";
+            }
+        }
+
+        function hideSelectionBubble() {
+            document.getElementById('text-selection-bubble').classList.add('hidden');
+        }
+
+        // 点击页面空白处关闭划词提示
+        document.addEventListener('mousedown', (e) => {
+            const bubble = document.getElementById('text-selection-bubble');
+            const storyContainer = document.getElementById('story-container');
+            if (bubble && !bubble.contains(e.target) && (!storyContainer || !storyContainer.contains(e.target))) {
+                hideSelectionBubble();
+            }
+        });
+
+        // --- 单词解释详情弹窗控制 ---
+        function openDefinitionModal(wordStr) {
+            let wordObj = currentQueue.find(w => w.word.toLowerCase() === wordStr.toLowerCase());
+            if (!wordObj) {
+                wordObj = ieltsVocabularyDatabase.find(w => w.word.toLowerCase() === wordStr.toLowerCase());
+            }
+
+            if (!wordObj) {
+                wordObj = {
+                    word: wordStr,
+                    phonetic: "/.../",
+                    definition: "Contextual temporary query word.",
+                    translation: "请参考整段文章背景进行理解。"
+                };
+            }
+
+            document.getElementById('modal-word-title').innerText = wordObj.word;
+            document.getElementById('modal-word-phonetic').innerText = wordObj.phonetic;
+            document.getElementById('modal-eng-def').innerText = wordObj.definition;
+            
+            const zhDefParagraph = document.getElementById('modal-zh-def');
+            zhDefParagraph.innerText = wordObj.translation;
+            zhDefParagraph.className = "text-emerald-900 font-semibold text-base glass-blur select-none cursor-pointer";
+
+            const speakBtn = document.getElementById('modal-speak-btn');
+            speakBtn.onclick = () => speakText(wordObj.word);
+
+            document.getElementById('modal-scroll-area').scrollTop = 0;
+
+            const modal = document.getElementById('definition-modal');
+            const card = document.getElementById('definition-modal-card');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            speakText(wordObj.word);
+        }
+
+        function closeDefinitionModal() {
+            const modal = document.getElementById('definition-modal');
+            const card = document.getElementById('definition-modal-card');
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // --- 翻译显露模块 ---
+        function revealTranslation() {
+            const wrapper = document.getElementById('translation-wrapper');
+            const revealBtn = document.getElementById('reveal-translation-btn');
+            
+            wrapper.classList.remove('hidden');
+            setTimeout(() => {
+                wrapper.classList.remove('opacity-0', 'translate-y-4');
+                wrapper.classList.add('opacity-100', 'translate-y-0');
+            }, 50);
+
+            revealBtn.className = "bg-emerald-100 text-emerald-800 font-semibold py-3 px-6 rounded-xl text-sm inline-flex items-center space-x-2 cursor-default";
+            revealBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>已解锁译文</span>`;
+            revealBtn.disabled = true;
+
+            setTimeout(() => {
+                wrapper.scrollIntoView({ behavior: 'smooth' });
+            }, 200);
+        }
+
+        function resetToTesting() {
+            currentQueue = [];
+            updateStatsUI();
+            showScreen('welcome-screen');
+        }
+
+        // --- 语音 TTS 发音功能 ---
+        function speakCurrentWord() {
+            if (currentTestWord) {
+                speakText(currentTestWord.word);
+            }
+        }
+
+        function speakEntireStory() {
+            if (generatedStory) {
+                const plainText = generatedStory.story.replace(/<[^>]*>/g, '');
+                speakText(plainText, 0.85); 
+            }
+        }
+
+        function speakText(text, rate = 1.0) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = rate;
+
+                const voices = window.speechSynthesis.getVoices();
+                const engVoice = voices.find(v => v.lang.startsWith('en-GB') || v.lang.startsWith('en-US'));
+                if (engVoice) utterance.voice = engVoice;
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showStatusToast("当前浏览器不支持语音引擎", "info");
+            }
+        }
+
+        // --- 辅助工具函数 ---
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('gemini_api_key', key);
+            toggleApiModal();
+            showStatusToast("API 密钥已安全存储于本地浏览器！", "success");
+        }
+
+        function toggleApiModal() {
+            const modal = document.getElementById('api-modal');
+            const card = document.getElementById('api-modal-card');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    card.classList.remove('scale-95', 'opacity-0');
+                    card.classList.add('scale-100', 'opacity-100');
+                }, 50);
+            } else {
+                card.classList.remove('scale-100', 'opacity-100');
+                card.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stats-known-count').innerText = knownWordsCount;
+            document.getElementById('stats-unknown-count').innerText = unknownWordsCount;
+            document.getElementById('stats-unfamiliar-queue').innerText = currentQueue.length;
+            
+            const badge = document.getElementById('queue-counter-badge');
+            if (badge) badge.innerText = `${currentQueue.length} / 10 个生词`;
+
+            const progressBar = document.getElementById('queue-progress-bar');
+            if (progressBar) {
+                const percentage = Math.min((currentQueue.length / 10) * 100, 100);
+                progressBar.style.width = `${percentage}%`;
+            }
+        }
+
+        function showScreen(screenId) {
+            const screens = ['welcome-screen', 'testing-screen', 'loading-screen', 'reading-screen', 'challenge-screen', 'challenge-result-screen'];
+            screens.forEach(s => {
+                document.getElementById(s).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function showStatusToast(message, type = "info") {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 z-50 transform translate-y-2 opacity-0 transition-all duration-300 px-5 py-3.5 rounded-2xl shadow-xl flex items-center space-x-3 text-sm font-semibold border ${
+                type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 
+                type === 'error' ? 'bg-rose-50 border-rose-100 text-rose-800' :
+                'bg-indigo-50 border-indigo-100 text-indigo-800'
+            }`;
+            
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-500' :
+                         type === 'error' ? 'fa-triangle-exclamation text-rose-500' :
+                         'fa-info-circle text-indigo-500';
+
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
