@@ -2,31 +2,28 @@
 <script>
 (function(){
   function fix(){
-    // 1. Replace photo placeholder with real photo
-    var placeholder = document.querySelector('div[class*="flex-shrink-0"] div[style*="dashed"]');
-    if(placeholder){
-      var parent = placeholder.closest('div[class*="flex-shrink-0"]');
-      if(parent){
-        var img = document.createElement('img');
-        img.src='/portfolio/photo.jpg';
-        img.alt='罗雨辰';
-        img.className='h-32 w-32 rounded-full object-cover border-2 border-[rgb(var(--border))] md:h-40 md:w-40';
-        var label = parent.querySelector('p');
-        if(label) label.remove();
-        placeholder.replaceWith(img);
+    var allDivs = document.querySelectorAll('div');
+    for(var i=0;i<allDivs.length;i++){
+      var d=allDivs[i];
+      if(d.textContent.trim()==='照片' && d.className.indexOf('flex')!==-1 && d.className.indexOf('h-32')!==-1){
+        var parent=d.parentElement;
+        if(parent){
+          var img=document.createElement('img');
+          img.src='/portfolio/photo.jpg';
+          img.alt='罗雨辰';
+          img.className='h-32 w-32 rounded-full object-cover border-2 border-[rgb(var(--border))] md:h-40 md:w-40';
+          var label=parent.querySelector('p');
+          if(label)label.remove();
+          d.replaceWith(img);
+          return;
+        }
       }
     }
   }
-  // Run after hydration
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',function(){setTimeout(fix,100);setTimeout(fix,1000);});
-  } else {
-    setTimeout(fix,100);setTimeout(fix,1000);
-  }
-  // MutationObserver for dynamic rendering
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){setTimeout(fix,100);setTimeout(fix,500);setTimeout(fix,1500);});}else{setTimeout(fix,100);setTimeout(fix,500);setTimeout(fix,1500);}
   var mo=new MutationObserver(function(){fix();});
   mo.observe(document.body,{childList:true,subtree:true});
-  setTimeout(function(){mo.disconnect();},5000);
+  setTimeout(function(){mo.disconnect();},8000);
 })();
 </script>
 </body></html>
